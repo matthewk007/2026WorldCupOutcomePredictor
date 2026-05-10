@@ -34,8 +34,11 @@ def load_kaggle_bundle(config_path) -> KaggleBundle:
     rankings_file = files.get("rankings")
     if rankings_file:
         rankings = normalize_match_columns(pd.read_csv(base_dir / rankings_file))
-        rankings["date"] = pd.to_datetime(rankings["date"], errors="coerce")
-        rankings = rankings.dropna(subset=["date", "team", "rank"])
+        if "date" in rankings.columns:
+            rankings["date"] = pd.to_datetime(rankings["date"], errors="coerce")
+            rankings = rankings.dropna(subset=["date", "team", "rank"])
+        else:
+            rankings = rankings.dropna(subset=["team", "rank"])
         rankings["rank"] = rankings["rank"].astype(int)
 
     return KaggleBundle(matches=matches, rankings=rankings)
@@ -49,13 +52,17 @@ def build_training_matches(bundle: KaggleBundle) -> pd.DataFrame:
 
 
 def latest_rank_snapshot(rankings: pd.DataFrame) -> dict[str, int]:
-    rankings_out = rankings.copy().sort_values("date")
+    rankings_out = rankings.copy()
+    if "date" in rankings_out.columns:
+        rankings_out = rankings_out.sort_values("date")
     latest = rankings_out.groupby("team", as_index=False).tail(1)
     return {row["team"]: int(row["rank"]) for _, row in latest.iterrows()}
 
 
 def ranking_snapshot_before(rankings: pd.DataFrame, cutoff_date) -> dict[str, int]:
     rankings_out = rankings.copy()
+    if "date" not in rankings_out.columns:
+        return latest_rank_snapshot(rankings_out)
     rankings_out = rankings_out[rankings_out["date"] < pd.to_datetime(cutoff_date)]
     if rankings_out.empty:
         return {}

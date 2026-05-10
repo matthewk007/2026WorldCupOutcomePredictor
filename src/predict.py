@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 from src.bundle import ranking_snapshot_before
+from src.bundle import latest_rank_snapshot
 from src.features import make_inference_row
 from src.model import ensure_artifacts, load_artifacts
 
@@ -32,6 +33,8 @@ def predict_match(
     ranking_snapshot = {}
     if rankings is not None and match_date is not None:
         ranking_snapshot = ranking_snapshot_before(rankings, match_date)
+    elif rankings is not None:
+        ranking_snapshot = latest_rank_snapshot(rankings)
 
     row = make_inference_row(
         home_team,
