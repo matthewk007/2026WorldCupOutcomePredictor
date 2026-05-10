@@ -111,7 +111,12 @@ def main():
 
     # Advanced Settings in expander to keep UI clean
     with st.expander("⚙️ Advanced Settings"):
-        model_dir = st.text_input("Model Directory", value=str(get_model_dir(DEFAULT_MODEL_DIR)))
+        model_dir = st.text_input(
+            "Model Directory", 
+            value=str(get_model_dir(DEFAULT_MODEL_DIR)),
+            disabled=True,
+            help="The directory where trained ML model artifacts are stored. This is managed automatically."
+        )
 
     st.markdown("---")
 
