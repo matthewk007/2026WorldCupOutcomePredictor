@@ -1,0 +1,3 @@
+[files]
+matches = "data/matches.csv"
+rankings = "data/rankings.csv"
