@@ -1,3 +1,3 @@
 [files]
-matches = "data/matches.csv"
-rankings = "data/rankings.csv"
+matches = "matches_1930_2022.csv"
+rankings = "fifa_ranking_2022-10-06.csv"
