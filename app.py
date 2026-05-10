@@ -59,7 +59,24 @@ def get_unique_teams(bundle) -> list[str]:
             teams.update(bundle.matches["home_team"].dropna().unique())
         if "away_team" in bundle.matches.columns:
             teams.update(bundle.matches["away_team"].dropna().unique())
-    return sorted(list(teams))
+            
+    # List of expected/qualified teams for 2026 World Cup (48 teams)
+    # Covering common naming conventions from the dataset
+    projected_2026_teams = {
+        "Argentina", "Australia", "Austria", "Belgium", "Brazil", "Cameroon", 
+        "Canada", "Colombia", "Costa Rica", "Croatia", "Denmark", "Ecuador", 
+        "Egypt", "England", "France", "Germany", "Iran", "IR Iran", "Iraq", "Italy", 
+        "Ivory Coast", "Côte d'Ivoire", "Jamaica", "Japan", "Mali", "Mexico", "Morocco", 
+        "Netherlands", "New Zealand", "Nigeria", "Panama", "Peru", "Poland", 
+        "Portugal", "Qatar", "Saudi Arabia", "Senegal", "Serbia", "South Korea", "Korea Republic",
+        "Spain", "Sweden", "Switzerland", "Tunisia", "Ukraine", "United States", "USA", 
+        "Uruguay", "Uzbekistan", "Wales", "Algeria", "Hungary", "Turkey", "Türkiye", "Norway"
+    }
+    
+    # Filter only teams that are expected in 2026 AND exist in the dataset
+    valid_2026_teams = sorted(list(teams.intersection(projected_2026_teams)))
+    
+    return valid_2026_teams
 
 def main():
     st.title("🏆 2026 World Cup Predictor")
