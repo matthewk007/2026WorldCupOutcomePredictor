@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from pathlib import Path
 
 import streamlit as st
@@ -49,32 +50,47 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+def get_unique_teams(bundle) -> list[str]:
+    teams = set()
+    if bundle.rankings is not None and "team" in bundle.rankings.columns:
+        teams.update(bundle.rankings["team"].dropna().unique())
+    if bundle.matches is not None:
+        if "home_team" in bundle.matches.columns:
+            teams.update(bundle.matches["home_team"].dropna().unique())
+        if "away_team" in bundle.matches.columns:
+            teams.update(bundle.matches["away_team"].dropna().unique())
+    return sorted(list(teams))
+
 def main():
-    st.title("🏆 World Cup Predictor")
-    st.write("Predict match outcomes and scores using historical Kaggle data and ML models.")
+    st.title("🏆 2026 World Cup Predictor")
+    st.write("Predict match outcomes for the upcoming 2026 World Cup.")
 
     # Initialize data & models on startup
     with st.spinner("Initializing models..."):
         bundle = load_kaggle_bundle(Path("data_sources.toml"))
         ensure_artifacts_from_bundle(str(get_model_dir(DEFAULT_MODEL_DIR)), Path("data_sources.toml"))
+        team_list = get_unique_teams(bundle)
+        
+        # Fallback if empty for some reason
+        if not team_list:
+            team_list = ["Brazil", "Argentina", "France", "England", "Spain", "Germany", "USA", "Mexico"]
 
     st.markdown("### Match Details")
     
+    # Pre-select some default teams if available
+    default_home = "USA" if "USA" in team_list else team_list[0]
+    default_away = "Mexico" if "Mexico" in team_list else (team_list[1] if len(team_list) > 1 else team_list[0])
+
     # Use columns for a cleaner form layout
     col1, col2 = st.columns(2)
     with col1:
-        home_team = st.text_input("Home Team", value="Brazil", placeholder="e.g. Brazil")
+        home_team = st.selectbox("Home Team", options=team_list, index=team_list.index(default_home))
     with col2:
-        away_team = st.text_input("Away Team", value="Argentina", placeholder="e.g. Argentina")
-        
-    col3, col4 = st.columns(2)
-    with col3:
-        match_date = st.date_input("Match Date")
-    with col4:
-        tournament = st.selectbox(
-            "Tournament", 
-            ["World Cup", "Friendly", "Copa America", "UEFA Euro", "Gold Cup", "AFCON"]
-        )
+        away_team = st.selectbox("Away Team", options=team_list, index=team_list.index(default_away))
+
+    # We enforce 2026 World Cup logic automatically without asking the user
+    match_date = datetime.date(2026, 6, 11)  # Kickoff date for 2026 World Cup
+    tournament = "World Cup"
 
     # Advanced Settings in expander to keep UI clean
     with st.expander("⚙️ Advanced Settings"):
@@ -83,6 +99,10 @@ def main():
     st.markdown("---")
 
     if st.button("Predict Outcome", type="primary"):
+        if home_team == away_team:
+            st.error("Please select two different teams.")
+            return
+            
         if not Path(model_dir).exists():
             st.error("Model artifacts not found. Train the models first.")
             return
@@ -114,11 +134,11 @@ def main():
                 
                 p_col1, p_col2, p_col3 = st.columns(3)
                 with p_col1:
-                    st.metric("Home Win", f"{probs.get('home_win', 0)*100:.1f}%")
+                    st.metric(f"{home_team} Win", f"{probs.get('home_win', 0)*100:.1f}%")
                 with p_col2:
                     st.metric("Draw", f"{probs.get('draw', 0)*100:.1f}%")
                 with p_col3:
-                    st.metric("Away Win", f"{probs.get('away_win', 0)*100:.1f}%")
+                    st.metric(f"{away_team} Win", f"{probs.get('away_win', 0)*100:.1f}%")
                     
             except Exception as e:
                 st.error(f"Prediction failed: {str(e)}")
