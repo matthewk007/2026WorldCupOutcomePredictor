@@ -11,6 +11,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
+from src.bundle import build_training_matches, load_kaggle_bundle
 from src.constants import OUTCOME_LABELS
 from src.features import build_training_frame
 
@@ -132,6 +133,22 @@ def ensure_artifacts(model_dir) -> ModelArtifacts:
         return ModelArtifacts(classifier_path=classifier_path, regressor_path=regressor_path)
 
     return train_models(fallback_training_frame(), model_dir)
+
+
+def ensure_artifacts_from_bundle(model_dir, config_path) -> ModelArtifacts:
+    model_dir = Path(model_dir)
+    classifier_path = model_dir / "classifier.joblib"
+    regressor_path = model_dir / "regressor.joblib"
+
+    if classifier_path.exists() and regressor_path.exists():
+        return ModelArtifacts(classifier_path=classifier_path, regressor_path=regressor_path)
+
+    bundle = load_kaggle_bundle(config_path)
+    training_matches = build_training_matches(bundle)
+    enriched = build_training_frame(training_matches)
+    if enriched["home_team"].nunique() < 2 or enriched["result"].nunique() < 2:
+        return train_models(fallback_training_frame(), model_dir)
+    return train_models(training_matches, model_dir)
 
 
 def load_artifacts(model_dir) -> tuple[Pipeline, Pipeline]:

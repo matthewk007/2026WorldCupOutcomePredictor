@@ -38,5 +38,5 @@ streamlit run app.py
 ## Streamlit Cloud
 
 - Deploy this repository directly to Streamlit Cloud using `streamlit_app.py` as the entrypoint.
-- The app will create fallback demo artifacts automatically if `artifacts/` is empty.
-- To use your own Kaggle-trained models, set `MODEL_DIR` to the artifact folder.
+- The app will train from the committed Kaggle CSVs the first time it launches if `artifacts/` is empty.
+- To use an existing artifact folder, set `MODEL_DIR` to the artifact folder.

@@ -5,7 +5,7 @@ from pathlib import Path
 import streamlit as st
 
 from src.config import DEFAULT_MODEL_DIR
-from src.model import ensure_artifacts
+from src.model import ensure_artifacts_from_bundle
 from src.predict import get_model_dir, predict_match
 
 
@@ -19,7 +19,7 @@ def main():
     tournament = st.text_input("Tournament", value="World Cup")
     model_dir = st.text_input("Model directory", value=str(get_model_dir(DEFAULT_MODEL_DIR)))
 
-    ensure_artifacts(model_dir)
+    ensure_artifacts_from_bundle(model_dir, Path("data_sources.toml"))
 
     if st.button("Predict"):
         if not Path(model_dir).exists():
