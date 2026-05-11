@@ -1,0 +1,73 @@
+stage,group,match_number,home_team,away_team
+Group Stage,A,1,Argentina,Australia
+Group Stage,A,2,Argentina,Austria
+Group Stage,A,3,Argentina,Belgium
+Group Stage,A,4,Australia,Austria
+Group Stage,A,5,Australia,Belgium
+Group Stage,A,6,Austria,Belgium
+Group Stage,B,1,Brazil,Cameroon
+Group Stage,B,2,Brazil,Canada
+Group Stage,B,3,Brazil,Colombia
+Group Stage,B,4,Cameroon,Canada
+Group Stage,B,5,Cameroon,Colombia
+Group Stage,B,6,Canada,Colombia
+Group Stage,C,1,Costa Rica,Croatia
+Group Stage,C,2,Costa Rica,Denmark
+Group Stage,C,3,Costa Rica,Ecuador
+Group Stage,C,4,Croatia,Denmark
+Group Stage,C,5,Croatia,Ecuador
+Group Stage,C,6,Denmark,Ecuador
+Group Stage,D,1,Egypt,England
+Group Stage,D,2,Egypt,France
+Group Stage,D,3,Egypt,Germany
+Group Stage,D,4,England,France
+Group Stage,D,5,England,Germany
+Group Stage,D,6,France,Germany
+Group Stage,E,1,Iran,Italy
+Group Stage,E,2,Iran,Ivory Coast
+Group Stage,E,3,Iran,Jamaica
+Group Stage,E,4,Italy,Ivory Coast
+Group Stage,E,5,Italy,Jamaica
+Group Stage,E,6,Ivory Coast,Jamaica
+Group Stage,F,1,Japan,Mali
+Group Stage,F,2,Japan,Mexico
+Group Stage,F,3,Japan,Morocco
+Group Stage,F,4,Mali,Mexico
+Group Stage,F,5,Mali,Morocco
+Group Stage,F,6,Mexico,Morocco
+Group Stage,G,1,Netherlands,New Zealand
+Group Stage,G,2,Netherlands,Nigeria
+Group Stage,G,3,Netherlands,Panama
+Group Stage,G,4,New Zealand,Nigeria
+Group Stage,G,5,New Zealand,Panama
+Group Stage,G,6,Nigeria,Panama
+Group Stage,H,1,Peru,Poland
+Group Stage,H,2,Peru,Portugal
+Group Stage,H,3,Peru,Qatar
+Group Stage,H,4,Poland,Portugal
+Group Stage,H,5,Poland,Qatar
+Group Stage,H,6,Portugal,Qatar
+Group Stage,I,1,Saudi Arabia,Senegal
+Group Stage,I,2,Saudi Arabia,Serbia
+Group Stage,I,3,Saudi Arabia,South Korea
+Group Stage,I,4,Senegal,Serbia
+Group Stage,I,5,Senegal,South Korea
+Group Stage,I,6,Serbia,South Korea
+Group Stage,J,1,Spain,Sweden
+Group Stage,J,2,Spain,Switzerland
+Group Stage,J,3,Spain,Tunisia
+Group Stage,J,4,Sweden,Switzerland
+Group Stage,J,5,Sweden,Tunisia
+Group Stage,J,6,Switzerland,Tunisia
+Group Stage,K,1,Ukraine,United States
+Group Stage,K,2,Ukraine,Uruguay
+Group Stage,K,3,Ukraine,Uzbekistan
+Group Stage,K,4,United States,Uruguay
+Group Stage,K,5,United States,Uzbekistan
+Group Stage,K,6,Uruguay,Uzbekistan
+Group Stage,L,1,Wales,Algeria
+Group Stage,L,2,Wales,Hungary
+Group Stage,L,3,Wales,Turkey
+Group Stage,L,4,Algeria,Hungary
+Group Stage,L,5,Algeria,Turkey
+Group Stage,L,6,Hungary,Turkey

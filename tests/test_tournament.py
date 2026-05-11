@@ -1,8 +1,15 @@
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
-from src.tournament import load_fixture_board, build_knockout_bracket, build_group_standings
+from src.tournament import (
+    advance_knockout_round,
+    build_group_standings,
+    build_knockout_bracket,
+    generate_group_stage_fixtures,
+    load_fixture_board,
+)
 
 
 def test_load_fixture_board_requires_file(tmp_path):
@@ -103,3 +110,64 @@ def test_build_knockout_bracket_returns_full_round_of_32():
     bracket = build_knockout_bracket(standings)
 
     assert len(bracket) == 16
+
+
+def test_generate_group_stage_fixtures_builds_round_robin_board():
+    teams = [f"Team {index}" for index in range(1, 49)]
+
+    board = generate_group_stage_fixtures(teams)
+
+    assert len(board) == 72
+    assert set(board["group"]) == set("ABCDEFGHIJKL")
+    assert board.groupby("group").size().eq(6).all()
+
+
+def test_advance_knockout_round_pairs_winners_in_order():
+    fixtures = pd.DataFrame(
+        {
+            "stage": ["Round of 32"] * 4,
+            "group": ["A", "B", "C", "D"],
+            "match_number": [1, 2, 3, 4],
+            "home_team": ["A", "C", "E", "G"],
+            "away_team": ["B", "D", "F", "H"],
+        }
+    )
+    results = pd.DataFrame(
+        {
+            "fixture_index": [0, 1, 2, 3],
+            "home_team": ["A", "C", "E", "G"],
+            "away_team": ["B", "D", "F", "H"],
+            "home_score": [2, 1, 3, 2],
+            "away_score": [0, 0, 1, 1],
+        }
+    )
+
+    next_round = advance_knockout_round(fixtures, results, next_stage="Quarterfinal")
+
+    assert list(next_round["home_team"]) == ["A", "E"]
+    assert list(next_round["away_team"]) == ["C", "G"]
+    assert list(next_round["stage"]) == ["Quarterfinal", "Quarterfinal"]
+
+
+def test_advance_knockout_round_rejects_draws():
+    fixtures = pd.DataFrame(
+        {
+            "stage": ["Round of 32"],
+            "group": ["A"],
+            "match_number": [1],
+            "home_team": ["A"],
+            "away_team": ["B"],
+        }
+    )
+    results = pd.DataFrame(
+        {
+            "fixture_index": [0],
+            "home_team": ["A"],
+            "away_team": ["B"],
+            "home_score": [1],
+            "away_score": [1],
+        }
+    )
+
+    with pytest.raises(ValueError):
+        advance_knockout_round(fixtures, results, next_stage="Quarterfinal")

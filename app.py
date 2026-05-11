@@ -9,7 +9,12 @@ from src.bundle import load_kaggle_bundle
 from src.config import DEFAULT_FIXTURE_PATH, DEFAULT_MODEL_DIR
 from src.model import ensure_artifacts_from_bundle
 from src.predict import get_model_dir, predict_match
-from src.tournament import build_group_standings, build_knockout_bracket, load_fixture_board
+from src.tournament import (
+    advance_knockout_round,
+    build_group_standings,
+    build_knockout_bracket,
+    load_fixture_board,
+)
 
 
 st.set_page_config(
@@ -44,23 +49,13 @@ def _get_team_list(bundle) -> list[str]:
     return sorted(teams)
 
 
-def _load_results_from_state(fixtures: pd.DataFrame) -> pd.DataFrame:
-    rows = []
-    for idx, fixture in fixtures.iterrows():
-        key = f"fixture_{idx}"
-        score = st.session_state.get(key)
-        if not score:
-            continue
-        rows.append(
-            {
-                "group": fixture["group"],
-                "home_team": fixture["home_team"],
-                "away_team": fixture["away_team"],
-                "home_score": int(score[0]),
-                "away_score": int(score[1]),
-            }
-        )
-    return pd.DataFrame(rows)
+def _ensure_session_keys(fixtures: pd.DataFrame) -> None:
+    for idx in fixtures.index:
+        st.session_state.setdefault(f"fixture_{idx}", None)
+
+
+def _save_score(idx: int, home_score: int, away_score: int) -> None:
+    st.session_state[f"fixture_{idx}"] = (home_score, away_score)
 
 
 def _render_fixture_row(idx: int, fixture: pd.Series, model_dir: Path, rankings) -> None:
@@ -74,30 +69,30 @@ def _render_fixture_row(idx: int, fixture: pd.Series, model_dir: Path, rankings)
         unsafe_allow_html=True,
     )
 
-    score_key = f"fixture_{idx}"
+    current_score = st.session_state.get(f"fixture_{idx}") or (0, 0)
     col1, col2, col3 = st.columns([1, 1, 1])
     with col1:
         home_score = st.number_input(
             f"{fixture['home_team']} goals",
             min_value=0,
             max_value=20,
-            value=st.session_state.get(score_key, (0, 0))[0],
-            key=f"{score_key}_home",
+            value=int(current_score[0]),
+            key=f"{idx}_home",
         )
     with col2:
         away_score = st.number_input(
             f"{fixture['away_team']} goals",
             min_value=0,
             max_value=20,
-            value=st.session_state.get(score_key, (0, 0))[1],
-            key=f"{score_key}_away",
+            value=int(current_score[1]),
+            key=f"{idx}_away",
         )
     with col3:
         if st.button(f"Save {fixture['home_team']} vs {fixture['away_team']}", key=f"save_{idx}"):
-            st.session_state[score_key] = (int(home_score), int(away_score))
+            _save_score(idx, int(home_score), int(away_score))
             st.success("Prediction saved")
 
-    if st.session_state.get(score_key):
+    if st.session_state.get(f"fixture_{idx}") is not None:
         prediction = predict_match(
             fixture["home_team"],
             fixture["away_team"],
@@ -109,27 +104,51 @@ def _render_fixture_row(idx: int, fixture: pd.Series, model_dir: Path, rankings)
         st.caption(f"Model outlook: {prediction['predicted_outcome']} | Expected score: {prediction['expected_score']}")
 
 
+def _results_frame(fixtures: pd.DataFrame) -> pd.DataFrame:
+    rows = []
+    for idx, fixture in fixtures.iterrows():
+        score = st.session_state.get(f"fixture_{idx}")
+        if score is None:
+            continue
+        rows.append(
+            {
+                "fixture_index": idx,
+                "group": fixture["group"],
+                "home_team": fixture["home_team"],
+                "away_team": fixture["away_team"],
+                "home_score": int(score[0]),
+                "away_score": int(score[1]),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def main():
     st.title("🏆 2026 World Cup Predictor")
-    st.write("Predict every match in tournament order, then advance into the knockout bracket.")
+    st.write("Predict the full tournament in stage order: group stage first, then knockout rounds.")
+
+    bundle = load_kaggle_bundle(Path("data_sources.toml"))
+    ensure_artifacts_from_bundle(str(get_model_dir(DEFAULT_MODEL_DIR)), Path("data_sources.toml"))
+    model_dir = get_model_dir(DEFAULT_MODEL_DIR)
+
+    teams = _get_team_list(bundle)
+    if len(teams) < 48:
+        st.error("Need at least 48 teams from the dataset to generate the 2026 group board.")
+        st.stop()
 
     if not DEFAULT_FIXTURE_PATH.exists():
         st.error(f"Missing official fixture file: {DEFAULT_FIXTURE_PATH}")
         raise FileNotFoundError(f"Missing official fixture file: {DEFAULT_FIXTURE_PATH}")
 
-    bundle = load_kaggle_bundle(Path("data_sources.toml"))
-    ensure_artifacts_from_bundle(str(get_model_dir(DEFAULT_MODEL_DIR)), Path("data_sources.toml"))
+    fixtures = load_fixture_board(DEFAULT_FIXTURE_PATH)
 
-    fixture_path = DEFAULT_FIXTURE_PATH
-    if not fixture_path.exists():
-        st.error(f"Missing official fixture file: {fixture_path}")
-        st.stop()
-
-    fixtures = load_fixture_board(fixture_path)
-    model_dir = get_model_dir(DEFAULT_MODEL_DIR)
+    _ensure_session_keys(fixtures)
 
     group_fixtures = fixtures[fixtures["stage"] == "Group Stage"].copy()
-    knockout_fixtures = fixtures[fixtures["stage"] != "Group Stage"].copy()
+    group_results = _results_frame(group_fixtures)
+
+    standings = build_group_standings(group_results) if not group_results.empty else pd.DataFrame()
+    knockout_board = build_knockout_bracket(standings) if not standings.empty else pd.DataFrame()
 
     group_tab, knockout_tab = st.tabs(["Group Stage", "Knockout Stage"])
 
@@ -141,26 +160,53 @@ def main():
             for idx, fixture in group_rows.iterrows():
                 _render_fixture_row(idx, fixture, model_dir, bundle.rankings)
 
-        results = _load_results_from_state(group_fixtures)
-        if not results.empty:
-            standings = build_group_standings(results)
+        if not standings.empty:
             st.markdown("### Current Group Standings")
             st.dataframe(standings, use_container_width=True)
 
     with knockout_tab:
         st.markdown("### Knockout Stage")
-        results = _load_results_from_state(group_fixtures)
-        if results.empty:
-            st.info("Predict the group stage first to unlock the knockout bracket.")
+        if standings.empty:
+            st.info("Complete some group stage predictions to unlock the knockout bracket.")
             st.stop()
 
-        standings = build_group_standings(results)
-        bracket = build_knockout_bracket(standings)
-        if bracket.empty:
-            st.info("The knockout bracket will appear after the group stage standings are complete.")
-            st.stop()
+        st.dataframe(knockout_board, use_container_width=True)
 
-        st.dataframe(bracket, use_container_width=True)
+        if not knockout_board.empty:
+            st.markdown("### Advance Winners")
+            st.caption("Enter knockout results in order to generate the next round.")
+
+            round_results = []
+            for idx, fixture in knockout_board.iterrows():
+                st.markdown(
+                    f"""
+                    <div class="fixture-card">
+                        <div><strong>{fixture['home_team']}</strong> vs <strong>{fixture['away_team']}</strong></div>
+                        <div class="fixture-meta">{fixture['stage']} · Match {idx + 1}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                col1, col2 = st.columns(2)
+                with col1:
+                    hs = st.number_input(f"{fixture['home_team']} knockout goals", min_value=0, max_value=20, value=0, key=f"ko_{idx}_home")
+                with col2:
+                    as_ = st.number_input(f"{fixture['away_team']} knockout goals", min_value=0, max_value=20, value=0, key=f"ko_{idx}_away")
+                round_results.append({
+                    "fixture_index": idx,
+                    "home_team": fixture["home_team"],
+                    "away_team": fixture["away_team"],
+                    "home_score": int(hs),
+                    "away_score": int(as_),
+                })
+
+            if st.button("Generate Next Round"):
+                next_round = advance_knockout_round(
+                    knockout_board,
+                    pd.DataFrame(round_results),
+                    next_stage="Quarterfinal",
+                )
+                st.dataframe(next_round, use_container_width=True)
 
 
 if __name__ == "__main__":

@@ -8,6 +8,9 @@ import pandas as pd
 REQUIRED_FIXTURE_COLUMNS = ["stage", "group", "match_number", "home_team", "away_team"]
 
 
+GROUP_NAMES = list("ABCDEFGHIJKL")
+
+
 def load_fixture_board(path: str | Path) -> pd.DataFrame:
     fixture_path = Path(path)
     if not fixture_path.exists():
@@ -73,3 +76,53 @@ def build_knockout_bracket(standings: pd.DataFrame) -> pd.DataFrame:
                 pairs.append(("Round of 32", left_third.iloc[0]["team"], right_third.iloc[0]["team"]))
 
     return pd.DataFrame(pairs, columns=["stage", "home_team", "away_team"])
+
+
+def generate_group_stage_fixtures(teams: list[str]) -> pd.DataFrame:
+    if len(teams) != 48:
+        raise ValueError("2026 World Cup group stage requires exactly 48 teams")
+
+    rows = []
+    for index, group in enumerate(GROUP_NAMES):
+        group_teams = teams[index * 4 : (index + 1) * 4]
+        match_number = 1
+        for i in range(len(group_teams)):
+            for j in range(i + 1, len(group_teams)):
+                rows.append(
+                    {
+                        "stage": "Group Stage",
+                        "group": group,
+                        "match_number": match_number,
+                        "home_team": group_teams[i],
+                        "away_team": group_teams[j],
+                    }
+                )
+                match_number += 1
+    return pd.DataFrame(rows, columns=REQUIRED_FIXTURE_COLUMNS)
+
+
+def advance_knockout_round(fixtures: pd.DataFrame, results: pd.DataFrame, next_stage: str) -> pd.DataFrame:
+    if fixtures.empty or results.empty:
+        return pd.DataFrame(columns=["stage", "group", "match_number", "home_team", "away_team"])
+
+    winners = []
+    for _, result in results.sort_values("fixture_index").iterrows():
+        if result["home_score"] == result["away_score"]:
+            raise ValueError("Knockout fixtures require a winner")
+        winners.append(result["home_team"] if result["home_score"] > result["away_score"] else result["away_team"])
+
+    rows = []
+    for index in range(0, len(winners), 2):
+        if index + 1 >= len(winners):
+            break
+        rows.append(
+            {
+                "stage": next_stage,
+                "group": "",
+                "match_number": index // 2 + 1,
+                "home_team": winners[index],
+                "away_team": winners[index + 1],
+            }
+        )
+
+    return pd.DataFrame(rows, columns=["stage", "group", "match_number", "home_team", "away_team"])
